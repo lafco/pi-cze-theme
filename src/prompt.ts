@@ -9,8 +9,9 @@
  *
  *     ▌ texto...            (tool cards: ▌ ● Read(path))
  *
- * The bar color is derived from the theme's `userMessageBg`, darkened, so it
- * reads as part of the card instead of the accent used by the tool cards.
+ * The bar color is derived from the theme's `userMessageBg`, lightened, so it
+ * stands out against the card instead of matching the accent used by the tool
+ * cards.
  *
  * The context is stored on the prototype so a module re-import (for example on
  * `/reload`) does not wrap it twice.
@@ -27,7 +28,7 @@ const ANSI = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g;
 const SGR_RUN = /^(?:\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07)/;
 const BG_RGB = /48;2;(\d+);(\d+);(\d+)m/;
 const RESET_BG = "\x1b[49m";
-const FALLBACK_BAR = "\x1b[38;2;41;36;29m"; // dark beige, when the bg is not truecolor
+const FALLBACK_BAR = "\x1b[38;2;151;135;109m"; // light beige, when the bg is not truecolor
 
 export type PromptCardContext = {
 	theme: {
@@ -53,11 +54,11 @@ function backgroundOn(context: PromptCardContext): string {
 	return index > 0 ? styled.slice(0, index) : "";
 }
 
-/** Bar color: the card background, darkened. */
+/** Bar color: the card background, lightened. */
 function barFor(context: PromptCardContext): string {
 	const match = BG_RGB.exec(backgroundOn(context));
 	if (!match) return FALLBACK_BAR;
-	const [r, g, b] = [1, 2, 3].map((i) => Math.round(Number(match[i]) * 0.7));
+	const [r, g, b] = [1, 2, 3].map((i) => Math.min(255, Math.round(Number(match[i]) * 2.6)));
 	return `\x1b[38;2;${r};${g};${b}m`;
 }
 

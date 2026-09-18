@@ -42,22 +42,35 @@ O pacote traz o tema `cze` (cópia do `dark` com `userMessageBg` bege,
 
 ## Menu do `/`
 
-O menu sai agrupado por origem — comandos do pi, skills, prompts e extensões —
-e a tag ilegível que o pi põe na descrição (`[u]`, `[p:git:github.com/...]`) dá
-lugar a um rótulo curto:
+Busca por escopo: a primeira palavra escolhe o que é buscado.
 
 ```
-/help                 [pi] Mostra a lista de comandos
-/skill:uso            [skill] Analisa o uso do produto
-/implement            [prompt] Implementa via chain scout -> planner -> worker
-/refinar-issue        [jira-flow] Puxa um épico do Jira
+/skill rev        so skills, casando "rev"
+/prompt imple     so prompt templates
+/pi set           so comandos nativos do pi
+/ext todos        so comandos de extensao
+/ext jira         por nome do pacote tambem
+/ext:jira-flow    so uma extensao
+/skill:code       os dois-pontos tambem funcionam
+```
+
+Selecionar um item substitui todo o texto do escopo pelo comando, então o
+andaime nunca chega no editor. Skills aparecem sem o prefixo `skill:` (o valor
+inserido mantém).
+
+Sem escopo, o menu vem agrupado por origem — comandos do pi, skills, prompts e
+extensões — e a tag mostra o escopo que você pode digitar:
+
+```
+/help                 [/pi] Mostra a lista de comandos
+/skill:uso            [/skill] Analisa o uso do produto
+/implement            [/prompt] Implementa via chain scout -> planner -> worker
+/refinar-issue        [/ext:jira-flow] Puxa um épico do Jira
 ```
 
 Usa o hook público `ui.addAutocompleteProvider`: muda ordem, `label` e
 `description`, nunca o `value` (o que é inserido no editor). Comandos da mesma
-extensão ficam juntos. O pi mostra poucos itens por vez
-(`autocompleteMaxVisible`, padrão 5) — aumentar esse valor deixa a divisão
-visível.
+extensão ficam juntos, e o retag é idempotente.
 
 ## Instalar
 
@@ -74,6 +87,6 @@ extensions/cze-ui.ts       extensão: chamada das tools nativas + barra no promp
 src/card.ts                primitivos do card (ToolCard, callLine, alvo genérico)
 src/tool-card-patch.ts     aplica o card em todas as tools
 src/prompt.ts              patch do componente do prompt do usuário
-src/command-groups.ts      agrupamento do menu do /
+src/command-groups.ts      escopos e agrupamento do menu do /
 themes/cze.json            tema: dark com userMessageBg bege
 ```
