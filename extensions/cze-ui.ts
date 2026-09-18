@@ -5,7 +5,8 @@
  * file only:
  *
  * - gives the built-in tools a nicer call line (path/range, command, diff);
- * - patches the user prompt to show the same left bar.
+ * - patches the user prompt to show the same left bar;
+ * - groups the `/` menu by origin (see `src/command-groups.ts`).
  *
  * Execution is untouched: the built-ins are re-registered with the same names
  * and delegate to the original implementations via createXTool(ctx.cwd).
@@ -24,6 +25,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { blank, callLine, shortenPath, truncate } from "../src/card.ts";
+import { groupCommands } from "../src/command-groups.ts";
 import { installPromptCard } from "../src/prompt.ts";
 import { installToolCards } from "../src/tool-card-patch.ts";
 
@@ -33,10 +35,12 @@ export default function (pi: ExtensionAPI) {
 	// Every tool gets the card (see the module docstring).
 	installToolCards();
 
-	// Left bar on the user's prompts, over the theme's `userMessageBg`.
+	// Left bar on the user's prompts, over the theme's `userMessageBg`; and the
+	// `/` menu grouped by origin (pi, skill, prompt, extension).
 	pi.on("session_start", (_event, ctx) => {
 		if (ctx.mode !== "tui") return;
 		installPromptCard(ctx.ui);
+		ctx.ui.addAutocompleteProvider(groupCommands(() => pi.getCommands()));
 	});
 
 	const cache = new Map<string, ReturnType<typeof build>>();

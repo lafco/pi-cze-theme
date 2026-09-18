@@ -40,6 +40,25 @@ O que você digita também ganha a barra, sobre o bloco `userMessageBg` do tema.
 O pacote traz o tema `cze` (cópia do `dark` com `userMessageBg` bege,
 `#3A342A`) — selecione `cze` em `/settings`.
 
+## Menu do `/`
+
+O menu sai agrupado por origem — comandos do pi, skills, prompts e extensões —
+e a tag ilegível que o pi põe na descrição (`[u]`, `[p:git:github.com/...]`) dá
+lugar a um rótulo curto:
+
+```
+/help                 [pi] Mostra a lista de comandos
+/skill:uso            [skill] Analisa o uso do produto
+/implement            [prompt] Implementa via chain scout -> planner -> worker
+/refinar-issue        [jira-flow] Puxa um épico do Jira
+```
+
+Usa o hook público `ui.addAutocompleteProvider`: muda ordem, `label` e
+`description`, nunca o `value` (o que é inserido no editor). Comandos da mesma
+extensão ficam juntos. O pi mostra poucos itens por vez
+(`autocompleteMaxVisible`, padrão 5) — aumentar esse valor deixa a divisão
+visível.
+
 ## Instalar
 
 ```bash
@@ -55,5 +74,6 @@ extensions/cze-ui.ts       extensão: chamada das tools nativas + barra no promp
 src/card.ts                primitivos do card (ToolCard, callLine, alvo genérico)
 src/tool-card-patch.ts     aplica o card em todas as tools
 src/prompt.ts              patch do componente do prompt do usuário
+src/command-groups.ts      agrupamento do menu do /
 themes/cze.json            tema: dark com userMessageBg bege
 ```
