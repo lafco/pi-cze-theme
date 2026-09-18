@@ -55,9 +55,34 @@ const KEYWORDS: Record<string, Group> = {
 	extensions: "extension",
 };
 
+/**
+ * Shortest prefix accepted before the keyword is complete. Below this, a partial
+ * word is left alone so `/ex` keeps meaning the fuzzy search for `explain` and
+ * `export` instead of jumping into the extension scope.
+ */
+const MIN_PREFIX = 3;
+
 const SCOPE = /^\/([a-z]+)(?::([^\s]*))?(?:\s+([\s\S]*))?$/i;
 
 type Group = "pi" | "skill" | "prompt" | "extension";
+
+/**
+ * Which scope a first word selects. Complete keywords always work (`/pi`); a
+ * partial word works from `MIN_PREFIX` on (`/prom`, `/promp`, `/ski`), as long as
+ * it does not fit two groups at once (`/p` is both pi and prompt, so it is left
+ * to the fuzzy search).
+ */
+function resolveGroup(word: string): Group | null {
+	const key = word.toLowerCase();
+	const exact = KEYWORDS[key];
+	if (exact) return exact;
+	if (key.length < MIN_PREFIX) return null;
+	const groups = new Set<Group>();
+	for (const [keyword, group] of Object.entries(KEYWORDS)) {
+		if (keyword.startsWith(key)) groups.add(group);
+	}
+	return groups.size === 1 ? [...groups][0] ?? null : null;
+}
 
 type Scope = {
 	group: Group;
@@ -239,11 +264,11 @@ export function groupCommands(getCommands: () => SlashCommandInfo[]): Autocomple
 	};
 }
 
-/** `/skill rev` -> { group: "skill", query: "rev" }. */
+/** `/skill rev` -> { group: "skill", query: "rev" }, `/ext:jira` -> { group: "extension", pkg: "jira" }. */
 function parseScope(typed: string): Scope | null {
 	const match = SCOPE.exec(typed);
 	if (!match?.[1]) return null;
-	const group = KEYWORDS[match[1].toLowerCase()];
+	const group = resolveGroup(match[1]);
 	if (!group) return null;
 	const colon = match[2] ?? "";
 	const rest = match[3] ?? "";
