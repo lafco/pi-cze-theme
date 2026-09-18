@@ -1,19 +1,14 @@
 /**
- * cze-style tool calls for pi.
+ * cze-ui — card style for pi.
  *
- * Display-only: the built-in tools are re-registered with the same names and
- * `renderShell: "self"`, so execution is delegated to the original tools via
- * createXTool(ctx.cwd) and behavior stays identical to stock pi.
+ * The card itself is applied to every tool by `src/tool-card-patch.ts`. This
+ * file only:
  *
- * Each call is a flat `● Read(path)` line inside a card (colored left bar plus
- * a subtle background). The result is hidden when collapsed; errors always
- * show. ctrl+o expands the full output.
+ * - gives the built-in tools a nicer call line (path/range, command, diff);
+ * - patches the user prompt to show the same left bar.
  *
- * The user's prompts get the same left bar over the `userMessageBg` block from
- * the active theme (see `themes/cze.json`).
- *
- * The card itself lives in `src/card.ts`; this file only wires the built-in
- * tools to it.
+ * Execution is untouched: the built-ins are re-registered with the same names
+ * and delegate to the original implementations via createXTool(ctx.cwd).
  */
 
 import {
@@ -28,14 +23,17 @@ import {
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { blank, shortenPath, toolRenderers, truncate } from "../src/card.ts";
+import { blank, callLine, shortenPath, truncate } from "../src/card.ts";
 import { installPromptCard } from "../src/prompt.ts";
+import { installToolCards } from "../src/tool-card-patch.ts";
 
 const ELBOW = "\u23BF"; // ⎿
 
 export default function (pi: ExtensionAPI) {
-	// Prompt card: same left bar as the tool cards, over the theme's
-	// `userMessageBg` block (themes/cze.json).
+	// Every tool gets the card (see the module docstring).
+	installToolCards();
+
+	// Left bar on the user's prompts, over the theme's `userMessageBg`.
 	pi.on("session_start", (_event, ctx) => {
 		if (ctx.mode !== "tui") return;
 		installPromptCard(ctx.ui);
@@ -73,17 +71,14 @@ export default function (pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			return toolsFor(ctx.cwd).read.execute(toolCallId, params, signal, onUpdate);
 		},
-		...toolRenderers({
-			name: "Read",
-			target(args) {
-				const path = shortenPath(args.path ?? "");
-				const range =
-					args.offset !== undefined || args.limit !== undefined
-						? `:${args.offset ?? 1}${args.limit !== undefined ? `-${(args.offset ?? 1) + args.limit - 1}` : ""}`
-						: "";
-				return `${path}${range}`;
-			},
-		}),
+		renderCall(args, theme) {
+			const path = shortenPath(args.path ?? "");
+			const range =
+				args.offset !== undefined || args.limit !== undefined
+					? `:${args.offset ?? 1}${args.limit !== undefined ? `-${(args.offset ?? 1) + args.limit - 1}` : ""}`
+					: "";
+			return callLine(theme, "Read", `${path}${range}`);
+		},
 	});
 
 	// bash -------------------------------------------------------------------
@@ -95,12 +90,9 @@ export default function (pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			return toolsFor(ctx.cwd).bash.execute(toolCallId, params, signal, onUpdate);
 		},
-		...toolRenderers({
-			name: "Bash",
-			target(args) {
-				return truncate(args.command ?? "", 100);
-			},
-		}),
+		renderCall(args, theme) {
+			return callLine(theme, "Bash", truncate(args.command ?? "", 100));
+		},
 	});
 
 	// edit -------------------------------------------------------------------
@@ -112,30 +104,24 @@ export default function (pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			return toolsFor(ctx.cwd).edit.execute(toolCallId, params, signal, onUpdate);
 		},
-		...toolRenderers({
-			name: "Edit",
-			target(args) {
-				return shortenPath(args.path ?? "");
-			},
-			note(args) {
-				const count = args.edits?.length ?? 0;
-				return count > 1 ? `(${count} edits)` : undefined;
-			},
-			renderResult(result, options, theme, context) {
-				const details = result.details as { diff?: string } | undefined;
-				if (!options.expanded || !details?.diff) return blank();
-				const body = details.diff
-					.split("\n")
-					.filter((line) => !line.startsWith("+++") && !line.startsWith("---") && !line.startsWith("@@"))
-					.map((line) => {
-						if (line.startsWith("+")) return theme.fg("toolDiffAdded", line);
-						if (line.startsWith("-")) return theme.fg("toolDiffRemoved", line);
-						return theme.fg("toolDiffContext", line);
-					})
-					.join("\n  ");
-				return new Text(`${theme.fg("dim", `${ELBOW} `)}${body}`, 0, 0);
-			},
-		}),
+		renderCall(args, theme) {
+			const count = args.edits?.length ?? 0;
+			return callLine(theme, "Edit", shortenPath(args.path ?? ""), count > 1 ? `(${count} edits)` : undefined);
+		},
+		renderResult(result, options, theme) {
+			const details = result.details as { diff?: string } | undefined;
+			if (!options.expanded || !details?.diff) return blank();
+			const body = details.diff
+				.split("\n")
+				.filter((line) => !line.startsWith("+++") && !line.startsWith("---") && !line.startsWith("@@"))
+				.map((line) => {
+					if (line.startsWith("+")) return theme.fg("toolDiffAdded", line);
+					if (line.startsWith("-")) return theme.fg("toolDiffRemoved", line);
+					return theme.fg("toolDiffContext", line);
+				})
+				.join("\n  ");
+			return new Text(`${theme.fg("dim", `${ELBOW} `)}${body}`, 0, 0);
+		},
 	});
 
 	// write ------------------------------------------------------------------
@@ -147,16 +133,10 @@ export default function (pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			return toolsFor(ctx.cwd).write.execute(toolCallId, params, signal, onUpdate);
 		},
-		...toolRenderers({
-			name: "Write",
-			target(args) {
-				return shortenPath(args.path ?? "");
-			},
-			note(args) {
-				const lines = args.content ? args.content.split("\n").length : 0;
-				return lines ? `${lines} lines` : undefined;
-			},
-		}),
+		renderCall(args, theme) {
+			const lines = args.content ? args.content.split("\n").length : 0;
+			return callLine(theme, "Write", shortenPath(args.path ?? ""), lines ? `${lines} lines` : undefined);
+		},
 	});
 
 	// grep -------------------------------------------------------------------
@@ -168,12 +148,9 @@ export default function (pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			return toolsFor(ctx.cwd).grep.execute(toolCallId, params, signal, onUpdate);
 		},
-		...toolRenderers({
-			name: "Grep",
-			target(args) {
-				return `/${args.pattern ?? ""}/ in ${args.path ? shortenPath(args.path) : "."}`;
-			},
-		}),
+		renderCall(args, theme) {
+			return callLine(theme, "Grep", `/${args.pattern ?? ""}/ in ${args.path ? shortenPath(args.path) : "."}`);
+		},
 	});
 
 	// find -------------------------------------------------------------------
@@ -185,12 +162,9 @@ export default function (pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			return toolsFor(ctx.cwd).find.execute(toolCallId, params, signal, onUpdate);
 		},
-		...toolRenderers({
-			name: "Find",
-			target(args) {
-				return `${args.pattern ?? ""} in ${args.path ? shortenPath(args.path) : "."}`;
-			},
-		}),
+		renderCall(args, theme) {
+			return callLine(theme, "Find", `${args.pattern ?? ""} in ${args.path ? shortenPath(args.path) : "."}`);
+		},
 	});
 
 	// ls ---------------------------------------------------------------------
@@ -202,11 +176,8 @@ export default function (pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			return toolsFor(ctx.cwd).ls.execute(toolCallId, params, signal, onUpdate);
 		},
-		...toolRenderers({
-			name: "Ls",
-			target(args) {
-				return shortenPath(args.path ?? ".");
-			},
-		}),
+		renderCall(args, theme) {
+			return callLine(theme, "Ls", shortenPath(args.path ?? "."));
+		},
 	});
 }
