@@ -1,0 +1,14 @@
+{
+	"name": "pi-cze-theme",
+	"version": "0.1.0",
+	"description": "Cards compactos para as tool calls do pi: barra colorida à esquerda, resultado escondido (ctrl+o expande).",
+	"keywords": ["pi-package"],
+	"license": "MIT",
+	"pi": {
+		"extensions": ["./extensions"]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
+}
