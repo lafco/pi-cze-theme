@@ -1,8 +1,9 @@
 # pi-cze-theme
 
-Cards compactos para as tool calls do pi.
+Cards compactos para as tool calls do pi, mais os prompts do usuário no mesmo
+estilo.
 
-Cada chamada vira uma linha flat dentro de um card com barra colorida à
+Cada chamada de tool vira uma linha flat dentro de um card com barra colorida à
 esquerda e fundo sutil. O resultado fica escondido por padrão; `ctrl+o`
 expande (erros aparecem sempre):
 
@@ -16,11 +17,21 @@ A barra segue o estado: accent no sucesso, âmbar enquanto roda, vermelho em
 erro. As cores de fundo saem do tema ativo (`toolSuccessBg`, `toolPendingBg`,
 `toolErrorBg`).
 
+## Prompt do usuário
+
+O que você digita também ganha a barra, sobre o bloco `userMessageBg` do tema.
+O pacote traz o tema `cze` (cópia do `dark` com `userMessageBg` bege,
+`#3A342A`) — selecione `cze` em `/settings` para o prompt ficar bege.
+
+Sem o tema `cze`, a barra aparece igual, mas sobre o fundo do tema ativo.
+
 ## Instalar
 
 ```bash
 pi install git:github.com/lafco/pi-cze-theme
 ```
+
+Depois escolha o tema `cze` em `/settings`.
 
 ## O que muda
 
@@ -46,6 +57,8 @@ pi.registerTool(cardify({ ...definicao }, { target: (a) => a.id }));
 ## Estrutura
 
 ```
-extensions/cze-ui.ts   extensão (re-registra as tools nativas)
+extensions/cze-ui.ts   extensão (tools nativas + barra no prompt)
 src/card.ts            helper de render (ToolCard, toolRenderers, cardify)
+src/prompt.ts          patch do componente do prompt do usuário
+themes/cze.json        tema: dark com userMessageBg bege
 ```

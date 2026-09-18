@@ -9,7 +9,10 @@
  * a subtle background). The result is hidden when collapsed; errors always
  * show. ctrl+o expands the full output.
  *
- * The card itself lives in `_lib/card.ts`; this file only wires the built-in
+ * The user's prompts get the same left bar over the `userMessageBg` block from
+ * the active theme (see `themes/cze.json`).
+ *
+ * The card itself lives in `src/card.ts`; this file only wires the built-in
  * tools to it.
  */
 
@@ -26,10 +29,18 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { blank, shortenPath, toolRenderers, truncate } from "../src/card.ts";
+import { installPromptCard } from "../src/prompt.ts";
 
 const ELBOW = "\u23BF"; // ⎿
 
 export default function (pi: ExtensionAPI) {
+	// Prompt card: same left bar as the tool cards, over the theme's
+	// `userMessageBg` block (themes/cze.json).
+	pi.on("session_start", (_event, ctx) => {
+		if (ctx.mode !== "tui") return;
+		installPromptCard(ctx.ui);
+	});
+
 	const cache = new Map<string, ReturnType<typeof build>>();
 
 	function build(cwd: string) {
