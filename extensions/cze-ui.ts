@@ -4,12 +4,18 @@
  * The card itself is applied to every tool by `src/tool-card-patch.ts`. This
  * file only:
  *
- * - gives the built-in tools a nicer call line (path/range, command, diff);
+ * - gives the built-in tools a nicer call line (path/range, command, diff) and a
+ *   result that stays hidden until expanded;
  * - patches the user prompt to show the same left bar;
  * - groups the `/` menu by origin (see `src/command-groups.ts`).
  *
  * Execution is untouched: the built-ins are re-registered with the same names
  * and delegate to the original implementations via createXTool(ctx.cwd).
+ *
+ * Every built-in re-registered here must declare `renderResult`, even when it is
+ * only `resultBlock`: the TUI fills a missing slot with the stock renderer
+ * (`withBuiltInRenderers`), so omitting it brings back the preview of the output
+ * (bash, grep, find, ls, write) instead of the collapsed one-liner.
  */
 
 import {
@@ -24,7 +30,7 @@ import {
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { blank, callLine, shortenPath, truncate } from "../src/card.ts";
+import { blank, callLine, resultBlock, shortenPath, truncate } from "../src/card.ts";
 import { groupCommands } from "../src/command-groups.ts";
 import { installPromptCard } from "../src/prompt.ts";
 import { installToolCards } from "../src/tool-card-patch.ts";
@@ -83,6 +89,9 @@ export default function (pi: ExtensionAPI) {
 					: "";
 			return callLine(theme, "Read", `${path}${range}`);
 		},
+		renderResult(result, options, theme, context) {
+			return resultBlock(result, options, theme, context);
+		},
 	});
 
 	// bash -------------------------------------------------------------------
@@ -96,6 +105,9 @@ export default function (pi: ExtensionAPI) {
 		},
 		renderCall(args, theme) {
 			return callLine(theme, "Bash", truncate(args.command ?? "", 100));
+		},
+		renderResult(result, options, theme, context) {
+			return resultBlock(result, options, theme, context);
 		},
 	});
 
@@ -141,6 +153,9 @@ export default function (pi: ExtensionAPI) {
 			const lines = args.content ? args.content.split("\n").length : 0;
 			return callLine(theme, "Write", shortenPath(args.path ?? ""), lines ? `${lines} lines` : undefined);
 		},
+		renderResult(result, options, theme, context) {
+			return resultBlock(result, options, theme, context);
+		},
 	});
 
 	// grep -------------------------------------------------------------------
@@ -154,6 +169,9 @@ export default function (pi: ExtensionAPI) {
 		},
 		renderCall(args, theme) {
 			return callLine(theme, "Grep", `/${args.pattern ?? ""}/ in ${args.path ? shortenPath(args.path) : "."}`);
+		},
+		renderResult(result, options, theme, context) {
+			return resultBlock(result, options, theme, context);
 		},
 	});
 
@@ -169,6 +187,9 @@ export default function (pi: ExtensionAPI) {
 		renderCall(args, theme) {
 			return callLine(theme, "Find", `${args.pattern ?? ""} in ${args.path ? shortenPath(args.path) : "."}`);
 		},
+		renderResult(result, options, theme, context) {
+			return resultBlock(result, options, theme, context);
+		},
 	});
 
 	// ls ---------------------------------------------------------------------
@@ -182,6 +203,9 @@ export default function (pi: ExtensionAPI) {
 		},
 		renderCall(args, theme) {
 			return callLine(theme, "Ls", shortenPath(args.path ?? "."));
+		},
+		renderResult(result, options, theme, context) {
+			return resultBlock(result, options, theme, context);
 		},
 	});
 }
